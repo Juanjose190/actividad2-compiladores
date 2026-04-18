@@ -1,7 +1,3 @@
-"""Parser de descenso recursivo para WhileLang.
-
-Implementa la gramática de WhileLang.g4 y produce un AST.
-"""
 from lexer import TT, Token
 from ast_nodes import (
     Program, VarDecl, Assign, IfStat, WhileStat,
@@ -19,8 +15,6 @@ class Parser:
         self._tokens = tokens
         self._pos    = 0
 
-    # ── utilidades ────────────────────────────────────────────────────────────
-
     def _cur(self) -> Token:
         return self._tokens[self._pos]
 
@@ -37,17 +31,14 @@ class Parser:
         self._pos += 1
         return tok
 
-    # ── reglas ────────────────────────────────────────────────────────────────
-
     def parse(self) -> Program:
         stmts = []
         while not self._match(TT.EOF):
             stmts.append(self._stat())
         return Program(stmts)
 
-    def _stat(self) -> object:
+    def _stat(self):
         tok = self._cur()
-
         if tok.type in (TT.INT_KW, TT.STR_KW):
             return self._var_decl()
         if tok.type == TT.IF:
@@ -62,7 +53,6 @@ class Parser:
             return ContinueStat(tok.line)
         if tok.type == TT.ID:
             return self._assign()
-
         raise ParseError(
             f"Token inesperado {tok.type.name} ({tok.value!r}) en línea {tok.line}"
         )
@@ -110,8 +100,6 @@ class Parser:
         self._consume(TT.RBRACE)
         return Block(stmts)
 
-    # ── expresiones (precedencia ascendente) ──────────────────────────────────
-
     def _expr(self):
         return self._compare()
 
@@ -148,7 +136,7 @@ class Parser:
             return IntLit(int(tok.value), tok.line)
         if tok.type == TT.STR_LIT:
             self._consume()
-            return StrLit(tok.value[1:-1], tok.line)   # quita comillas
+            return StrLit(tok.value[1:-1], tok.line)
         if tok.type == TT.ID:
             self._consume()
             return IdExpr(tok.value, tok.line)
