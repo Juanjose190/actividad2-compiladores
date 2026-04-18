@@ -1,4 +1,3 @@
-"""Lexer para WhileLang — corresponde a los tokens definidos en WhileLang.g4"""
 from enum import Enum, auto
 
 
@@ -19,11 +18,11 @@ class TT(Enum):
     SLASH    = auto()
     LT       = auto()
     GT       = auto()
-    EQ       = auto()   # ==
-    NEQ      = auto()   # !=
-    LEQ      = auto()   # <=
-    GEQ      = auto()   # >=
-    ASSIGN   = auto()   # =
+    EQ       = auto()
+    NEQ      = auto()
+    LEQ      = auto()
+    GEQ      = auto()
+    ASSIGN   = auto()
     LPAREN   = auto()
     RPAREN   = auto()
     LBRACE   = auto()
@@ -75,7 +74,6 @@ def tokenize(source: str) -> list[Token]:
     while pos < n:
         ch = source[pos]
 
-        # whitespace
         if ch in ' \t\r':
             pos += 1
             continue
@@ -84,13 +82,11 @@ def tokenize(source: str) -> list[Token]:
             pos += 1
             continue
 
-        # line comment
         if source[pos:pos+2] == '//':
             while pos < n and source[pos] != '\n':
                 pos += 1
             continue
 
-        # string literal
         if ch == '"':
             start = pos
             pos += 1
@@ -104,7 +100,6 @@ def tokenize(source: str) -> list[Token]:
             tokens.append(Token(TT.STR_LIT, source[start:pos], line))
             continue
 
-        # integer literal
         if ch.isdigit():
             start = pos
             while pos < n and source[pos].isdigit():
@@ -112,7 +107,6 @@ def tokenize(source: str) -> list[Token]:
             tokens.append(Token(TT.INT_LIT, source[start:pos], line))
             continue
 
-        # identifier / keyword
         if ch.isalpha() or ch == '_':
             start = pos
             while pos < n and (source[pos].isalnum() or source[pos] == '_'):
@@ -121,7 +115,6 @@ def tokenize(source: str) -> list[Token]:
             tokens.append(Token(KEYWORDS.get(word, TT.ID), word, line))
             continue
 
-        # two-char operators
         two = source[pos:pos+2]
         if two == '==':
             tokens.append(Token(TT.EQ,  '==', line)); pos += 2; continue
@@ -132,7 +125,6 @@ def tokenize(source: str) -> list[Token]:
         if two == '>=':
             tokens.append(Token(TT.GEQ, '>=', line)); pos += 2; continue
 
-        # single-char operators
         if ch in SINGLE:
             tokens.append(Token(SINGLE[ch], ch, line))
             pos += 1

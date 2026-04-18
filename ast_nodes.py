@@ -1,6 +1,3 @@
-"""Nodos del AST para WhileLang."""
-
-
 class Node:
     pass
 
@@ -12,7 +9,7 @@ class Program(Node):
 
 class VarDecl(Node):
     def __init__(self, type_, name, expr, line):
-        self.type_ = type_   # 'int' | 'string'
+        self.type_ = type_
         self.name  = name
         self.expr  = expr
         self.line  = line
@@ -29,7 +26,7 @@ class IfStat(Node):
     def __init__(self, cond, then_block, else_block, line):
         self.cond       = cond
         self.then_block = then_block
-        self.else_block = else_block  # None si no hay else
+        self.else_block = else_block
         self.line       = line
 
 
