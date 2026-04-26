@@ -5,7 +5,7 @@
 | Fase | Nombre | Estado |
 |------|--------|--------|
 | 0 | Bootstrap | ✅ Completada |
-| 1 | Seguridad (Auth/RBAC/AuditLog) | ⏳ Pendiente |
+| 1 | Seguridad (Auth/RBAC/AuditLog) | 🔄 En planificación |
 | 2 | Compartido + datos maestros | ⏳ Pendiente |
 | 3 | Módulo 1: motor IA (sin Gemini) | ⏳ Pendiente |
 | 4 | Módulo 1: integración Gemini | ⏳ Pendiente |
@@ -130,4 +130,118 @@ feat: bootstrap Fase 0 — estructura, NestJS, React/Vite, docker-compose, healt
 
 ---
 
-> **Estado**: Fase 0 implementada y commiteada. Esperando visto bueno para Fase 1.
+> **Estado**: Fase 0 completada y pusheada. ✅
+
+---
+
+## Fase 1 — Seguridad
+
+### Objetivo
+Autenticación JWT completa, RBAC de 3 roles, registro de sesiones y audit log inmutable que captura toda mutación.
+
+### Archivos a crear / modificar
+
+```
+cal/backend/src/seguridad/
+├── seguridad.modulo.ts                        # módulo raíz de seguridad
+├── entidades/
+│   ├── rol.entidad.ts                         # ROL(id, nombre, descripcion)
+│   ├── permiso.entidad.ts                     # PERMISO(id, codigo UK, descripcion)
+│   ├── usuario.entidad.ts                     # USUARIO(id, nombre, email UK, password_hash, rol, activo, fecha_creacion)
+│   ├── sesion.entidad.ts                      # SESION(id, usuario, token_jwt, fecha_emision, fecha_expiracion, ip_origen)
+│   └── audit-log.entidad.ts                   # AUDIT_LOG(id, usuario, accion, entidad, entidad_id, timestamp, datos_previos JSONB, datos_nuevos JSONB)
+├── auth/
+│   ├── auth.modulo.ts
+│   ├── auth.controlador.ts                    # POST /api/auth/login, /refresh, /logout
+│   ├── auth.servicio.ts                       # lógica login/refresh/logout + bcrypt
+│   ├── auth.controlador.spec.ts
+│   ├── auth.servicio.spec.ts
+│   ├── estrategias/
+│   │   └── jwt.estrategia.ts                  # PassportJS JWT strategy
+│   ├── guardias/
+│   │   ├── jwt.guardia.ts                     # AuthGuard('jwt')
+│   │   ├── jwt.guardia.spec.ts
+│   │   ├── roles.guardia.ts                   # verifica @Roles() contra user.rol
+│   │   └── roles.guardia.spec.ts
+│   └── dto/
+│       ├── login.dto.ts                       # { email, contrasena }
+│       └── respuesta-auth.dto.ts              # { access_token, refresh_token, rol }
+├── usuarios/
+│   ├── usuarios.modulo.ts
+│   ├── usuarios.controlador.ts               # GET|POST|PATCH|DELETE /api/usuarios (Admin)
+│   ├── usuarios.servicio.ts
+│   ├── usuarios.servicio.spec.ts
+│   └── dto/
+│       ├── crear-usuario.dto.ts
+│       ├── actualizar-usuario.dto.ts
+│       └── respuesta-usuario.dto.ts
+├── audit-log/
+│   ├── audit-log.servicio.ts                 # registrar() — solo INSERT, nunca UPDATE/DELETE
+│   ├── audit-log.servicio.spec.ts
+│   └── dto/
+│       └── respuesta-audit-log.dto.ts
+└── decoradores/
+    ├── roles.decorador.ts                    # @Roles(RolNombre.Admin, ...)
+    ├── usuario-actual.decorador.ts           # @UsuarioActual() extrae JWT payload
+    └── auditar.interceptor.ts               # interceptor que lee @SetMetadata('auditEntidad') y escribe AUDIT_LOG
+
+# Archivos que se modifican:
+cal/backend/src/app.modulo.ts                 # agrega SeguridadModulo
+cal/backend/package.json                      # nuevas deps: bcrypt, passport, @nestjs/passport, @nestjs/jwt
+```
+
+### Dependencias nuevas
+```
+bcrypt @types/bcrypt
+@nestjs/passport passport passport-jwt @types/passport-jwt
+@nestjs/jwt
+```
+
+### Diseño de decisiones clave
+
+| Decisión | Elección |
+|----------|---------|
+| Hash contraseñas | `bcrypt` con `saltRounds = 12` (configurable vía `BCRYPT_ROUNDS`) |
+| JWT access token | Expira en `JWT_EXPIRACION` (default `8h`) |
+| JWT refresh token | Expira en `JWT_EXPIRACION_REFRESH` (default `7d`), firmado con clave diferente |
+| RBAC | `@Roles()` decorator + `RolesGuardia` que lee `user.rol` del JWT |
+| Audit log | Interceptor `AuditarInterceptor` + decorator `@Auditar('ENTIDAD')` en controladores; captura `datos_previos` (query antes) y `datos_nuevos` (body/respuesta) |
+| AUDIT_LOG inmutable | El `AuditLogServicio` solo expone `registrar()` — sin métodos de update/delete |
+| Sesiones | Al hacer login se inserta en SESION; al logout se marca `fecha_expiracion = now()` |
+| Roles iniciales | Seeder en `SeguridadModulo.onModuleInit()`: Admin, Docente, Estudiante |
+
+### Endpoints expuestos
+
+```
+POST   /api/auth/login          → { access_token, refresh_token, rol }   [público]
+POST   /api/auth/refresh        → { access_token }                        [público, requiere refresh_token]
+POST   /api/auth/logout         → 204                                     [JWT]
+GET    /api/usuarios            → paginado                                [Admin]
+POST   /api/usuarios            → usuario creado                          [Admin]
+PATCH  /api/usuarios/:id        → usuario actualizado                     [Admin]
+DELETE /api/usuarios/:id        → 204                                     [Admin]
+GET    /api/audit-log           → paginado, filtrable por entidad/fecha   [Admin]
+```
+
+### Tests requeridos (cobertura ≥ 80 % en `seguridad/`)
+
+| Archivo spec | Casos |
+|-------------|-------|
+| `auth.servicio.spec.ts` | login válido devuelve tokens; login con email inexistente → 401; login con contraseña incorrecta → 401; refresh válido; refresh con token expirado → 401 |
+| `auth.controlador.spec.ts` | POST /login 200; POST /login 401; POST /logout 204 |
+| `jwt.guardia.spec.ts` | token válido pasa; token expirado → 401; sin token → 401 |
+| `roles.guardia.spec.ts` | rol correcto pasa; rol incorrecto → 403 |
+| `audit-log.servicio.spec.ts` | `registrar()` inserta una fila; no expone métodos de delete/update |
+| `usuarios.servicio.spec.ts` | crear usuario hashea contraseña; email duplicado → 409; listar paginado |
+
+### Migración TypeORM
+- Un único archivo de migración `migrations/1_seguridad_inicial.ts` que crea las 5 tablas con todos los índices y constraints del ERD canónico.
+
+### Commit de esta fase
+```
+feat: Fase 1 — seguridad, JWT, RBAC, audit log, CRUD usuarios
+```
+
+---
+
+> **Instrucción**: Confirma este plan con "ok" para que empiece a codear.
