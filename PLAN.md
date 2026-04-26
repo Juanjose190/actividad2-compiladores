@@ -4,7 +4,7 @@
 
 | Fase | Nombre | Estado |
 |------|--------|--------|
-| 0 | Bootstrap | 🔄 En planificación |
+| 0 | Bootstrap | ✅ Completada |
 | 1 | Seguridad (Auth/RBAC/AuditLog) | ⏳ Pendiente |
 | 2 | Compartido + datos maestros | ⏳ Pendiente |
 | 3 | Módulo 1: motor IA (sin Gemini) | ⏳ Pendiente |
@@ -130,4 +130,4 @@ feat: bootstrap Fase 0 — estructura, NestJS, React/Vite, docker-compose, healt
 
 ---
 
-> **Instrucción**: Confirma este plan con un "OK" o pide cambios. No escribo código hasta recibir tu visto bueno.
+> **Estado**: Fase 0 implementada y commiteada. Esperando visto bueno para Fase 1.
