@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SaludModulo } from './core/salud/salud.modulo';
+import { SeguridadModulo } from './seguridad/seguridad.modulo';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SaludModulo } from './core/salud/salud.modulo';
       inject: [ConfigService],
     }),
     SaludModulo,
+    SeguridadModulo,
   ],
 })
 export class AppModulo {}
