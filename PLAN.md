@@ -5,14 +5,14 @@
 | Fase | Nombre | Estado |
 |------|--------|--------|
 | 0 | Bootstrap | ✅ Completada |
-| 1 | Seguridad (Auth/RBAC/AuditLog) | 🔄 En planificación |
-| 2 | Compartido + datos maestros | ⏳ Pendiente |
+| 1 | Seguridad (Auth/RBAC/AuditLog) | ✅ Completada |
+| 2 | Compartido + datos maestros | 🔄 En planificación |
 | 3 | Módulo 1: motor IA (sin Gemini) | ⏳ Pendiente |
 | 4 | Módulo 1: integración Gemini | ⏳ Pendiente |
 | 5 | Módulo 2: formularios y recolección | ⏳ Pendiente |
 | 6 | Módulo 2: KDD + alertas + dashboard | ⏳ Pendiente |
-| 7 | Frontend completo | ⏳ Pendiente |
-| 8 | Hardening | ⏳ Pendiente |
+| 7 | Frontend completo | ⏭️ Omitida (solo backend) |
+| 8 | Hardening (backend) | ⏳ Pendiente |
 
 ---
 
@@ -244,4 +244,123 @@ feat: Fase 1 — seguridad, JWT, RBAC, audit log, CRUD usuarios
 
 ---
 
-> **Instrucción**: Confirma este plan con "ok" para que empiece a codear.
+> **Estado**: Fase 1 completada y pusheada. ✅
+
+---
+
+## Fase 2 — Compartido + datos maestros
+
+### Objetivo
+Crear todos los modelos y CRUDs de los datos de configuración que necesitan los módulos de horarios y evaluación. Solo backend.
+
+### Archivos a crear
+
+```
+cal/backend/src/compartido/
+├── entidades/
+│   ├── docente.entidad.ts          # DOCENTE(id, usuario_id FK, especialidad, carga_maxima_horas)
+│   ├── estudiante.entidad.ts       # ESTUDIANTE(id, usuario_id FK, grupo_id FK nullable)
+│   └── periodo-academico.entidad.ts# PERIODO_ACADEMICO(id, nombre, fecha_inicio, fecha_fin)
+├── compartido.modulo.ts
+
+cal/backend/src/modulo-horarios/
+├── entidades/
+│   ├── aula.entidad.ts             # AULA(id, codigo UK, capacidad, tipo, activa)
+│   ├── nivel-idioma.entidad.ts     # NIVEL_IDIOMA(id, codigo [A1..C1], nombre)
+│   ├── curso.entidad.ts            # CURSO(id, nombre, nivel_id FK, intensidad_horaria)
+│   ├── grupo.entidad.ts            # GRUPO(id, codigo, curso_id FK, cupo_max, jornada)
+│   ├── franja-horaria.entidad.ts   # FRANJA_HORARIA(id, dia_semana, hora_inicio, hora_fin, bloque_idx)
+│   └── disponibilidad.entidad.ts  # DISPONIBILIDAD(id, docente_id FK, franja_id FK, disponible)
+├── aulas/
+│   ├── aulas.controlador.ts        # CRUD /api/aulas
+│   ├── aulas.servicio.ts
+│   ├── aulas.servicio.spec.ts
+│   └── dto/ (crear, actualizar, respuesta)
+├── niveles/
+│   ├── niveles.controlador.ts      # CRUD /api/niveles
+│   ├── niveles.servicio.ts
+│   ├── niveles.servicio.spec.ts
+│   └── dto/
+├── cursos/
+│   ├── cursos.controlador.ts       # CRUD /api/cursos
+│   ├── cursos.servicio.ts
+│   ├── cursos.servicio.spec.ts
+│   └── dto/
+├── grupos/
+│   ├── grupos.controlador.ts       # CRUD /api/grupos
+│   ├── grupos.servicio.ts
+│   ├── grupos.servicio.spec.ts
+│   └── dto/
+├── franjas/
+│   ├── franjas.controlador.ts      # CRUD /api/franjas
+│   ├── franjas.servicio.ts
+│   ├── franjas.servicio.spec.ts
+│   └── dto/
+├── disponibilidades/
+│   ├── disponibilidades.controlador.ts  # CRUD /api/disponibilidades (Docente puede editar las suyas)
+│   ├── disponibilidades.servicio.ts
+│   ├── disponibilidades.servicio.spec.ts
+│   └── dto/
+├── docentes/
+│   ├── docentes.controlador.ts     # CRUD /api/docentes
+│   ├── docentes.servicio.ts
+│   ├── docentes.servicio.spec.ts
+│   └── dto/
+└── modulo-horarios.modulo.ts       # importado en AppModulo
+
+cal/backend/src/compartido/
+├── periodos/
+│   ├── periodos.controlador.ts     # CRUD /api/periodos
+│   ├── periodos.servicio.ts
+│   ├── periodos.servicio.spec.ts
+│   └── dto/
+└── estudiantes/
+    ├── estudiantes.controlador.ts  # CRUD /api/estudiantes (Admin)
+    ├── estudiantes.servicio.ts
+    ├── estudiantes.servicio.spec.ts
+    └── dto/
+
+cal/backend/src/migraciones/
+└── 1700000000001-datos-maestros.ts  # migración con todas las tablas nuevas
+```
+
+### Endpoints (todos protegidos con JWT)
+
+| Método | Ruta | Roles |
+|--------|------|-------|
+| GET/POST/PATCH/DELETE | `/api/aulas` | Admin |
+| GET/POST/PATCH/DELETE | `/api/niveles` | Admin |
+| GET/POST/PATCH/DELETE | `/api/cursos` | Admin |
+| GET/POST/PATCH/DELETE | `/api/grupos` | Admin |
+| GET/POST/PATCH/DELETE | `/api/franjas` | Admin |
+| GET/POST/PATCH/DELETE | `/api/docentes` | Admin |
+| GET | `/api/docentes/:id` | Admin, Docente (solo el propio) |
+| GET/POST/PATCH | `/api/disponibilidades` | Admin |
+| GET/PATCH | `/api/disponibilidades/mias` | Docente (sus propias) |
+| GET/POST/PATCH/DELETE | `/api/periodos` | Admin |
+| GET/POST/PATCH/DELETE | `/api/estudiantes` | Admin |
+
+### Enum values
+- `FRANJA.dia_semana`: `LUN | MAR | MIE | JUE | VIE | SAB`
+- `AULA.tipo`: `SALON | LAB | VIRTUAL`
+- `NIVEL_IDIOMA.codigo`: `A1 | A2 | B1 | B2 | C1`
+- `GRUPO.jornada`: `MANANA | TARDE | NOCHE`
+
+### Migración TypeORM
+Archivo `1700000000001-datos-maestros.ts` con SQL completo de las 8 tablas nuevas e índices compuestos:
+- `ASIGNACION(docente_id, franja_horaria_id, periodo_id)` — preparado para Fase 3
+- `DISPONIBILIDAD(docente_id, franja_horaria_id)` — unique constraint
+
+### Tests requeridos
+Un archivo `*.servicio.spec.ts` por cada servicio con casos mínimos:
+- CRUD happy path (crear, listar, buscar por id, actualizar, eliminar)
+- Casos de error (not found, conflict por código único)
+
+### Commit de esta fase
+```
+feat: Fase 2 — datos maestros, CRUDs horarios y compartido
+```
+
+---
+
+> **Instrucción**: Confirma con "ok" para empezar.
