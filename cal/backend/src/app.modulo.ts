@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CompartidoModulo } from './compartido/compartido.modulo';
 import { SaludModulo } from './core/salud/salud.modulo';
+import { ModuloEvaluacionModulo } from './modulo-evaluacion/modulo-evaluacion.modulo';
 import { ModuloHorariosModulo } from './modulo-horarios/modulo-horarios.modulo';
 import { SeguridadModulo } from './seguridad/seguridad.modulo';
 
@@ -29,6 +30,7 @@ import { SeguridadModulo } from './seguridad/seguridad.modulo';
     SeguridadModulo,
     CompartidoModulo,
     ModuloHorariosModulo,
+    ModuloEvaluacionModulo,
   ],
 })
 export class AppModulo {}
